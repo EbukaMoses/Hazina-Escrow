@@ -27,7 +27,7 @@ vi.mock('../agent/agent.service', () => ({
 
 import { runResearchAgentDemo } from '../agent/agent.service';
 import { generateDataSummary } from '../ai/claude.service';
-import { getEscrow, releaseEscrow } from '../lib/contract.client';
+import { getEscrow, releaseEscrow, refundEscrow } from '../lib/contract.client';
 import { agentRouter } from '../agent/agent.router';
 import { paymentsRouter } from './payments.router';
 import type { EscrowRecord } from '../lib/contract.client';
@@ -160,6 +160,55 @@ describeSocket('payments and agent integration routes', () => {
     expect(r.body.warning).toBe('SELLER_PAYOUT_PENDING');
     expect(r.body.transaction.sellerPaid).toBe(false);
     expect(r.body.transaction.releaseTxHash).toBeNull();
+  });
+
+  it('POST /api/verify/:id/demo returns data in demo mode', async () => {
+    const r = await request(app).post('/api/verify/ds-payment-1/demo').send({ buyerQuestion: 'What is the yield?' });
+    expect(r.status).toBe(200);
+    expect(r.body.success).toBe(true);
+    expect(r.body.demo).toBe(true);
+    expect(r.body.ai.summary).toBe('Executive summary');
+  });
+
+  it('POST /api/verify/:id/demo returns fallback when AI fails', async () => {
+    vi.mocked(generateDataSummary).mockRejectedValueOnce(new Error('AI unavailable'));
+    const r = await request(app).post('/api/verify/ds-payment-1/demo').send({});
+    expect(r.status).toBe(200);
+    expect(r.body.ai.summary).toContain('Demo mode');
+  });
+
+  it('POST /api/verify/:id/demo returns 404 for unknown dataset', async () => {
+    const r = await request(app).post('/api/verify/does-not-exist/demo').send({});
+    expect(r.status).toBe(404);
+  });
+
+  it('POST /api/verify/:id returns 500 when AI fails and refund also fails', async () => {
+    vi.mocked(generateDataSummary).mockRejectedValueOnce(new Error('AI down'));
+    vi.mocked(refundEscrow).mockRejectedValueOnce(new Error('Refund failed too'));
+    const r = await request(app).post('/api/verify/ds-payment-1').send({ escrowId: 42 });
+    expect(r.status).toBe(500);
+    expect(r.body.error).toContain('AI processing failed');
+  });
+
+  it('POST /api/verify/:id returns 400 when escrow dataset_id does not match', async () => {
+    vi.mocked(getEscrow).mockResolvedValueOnce({ ...VALID_ESCROW, dataset_id: 'wrong-dataset' });
+    const r = await request(app).post('/api/verify/ds-payment-1').send({ escrowId: 42 });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toContain('mismatch');
+  });
+
+  it('POST /api/verify/:id returns 400 when escrow is already released', async () => {
+    vi.mocked(getEscrow).mockResolvedValueOnce({ ...VALID_ESCROW, released: true });
+    const r = await request(app).post('/api/verify/ds-payment-1').send({ escrowId: 42 });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toContain('already released');
+  });
+
+  it('POST /api/verify/:id returns 400 when escrow is already refunded', async () => {
+    vi.mocked(getEscrow).mockResolvedValueOnce({ ...VALID_ESCROW, refunded: true });
+    const r = await request(app).post('/api/verify/ds-payment-1').send({ escrowId: 42 });
+    expect(r.status).toBe(400);
+    expect(r.body.error).toContain('already refunded');
   });
 
   it('GET /api/admin/unpaid-sellers returns failed seller payouts', async () => {

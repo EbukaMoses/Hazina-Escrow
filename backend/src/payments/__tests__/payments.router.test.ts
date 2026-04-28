@@ -196,6 +196,48 @@ describe('POST /api/verify/:id', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.transaction.releaseTxHash).toBeNull();
   });
+
+  it('returns 400 when escrow is already released', async () => {
+    vi.mocked(getEscrow).mockResolvedValue({ ...VALID_ESCROW, released: true });
+
+    const res = await request(app)
+      .post('/api/verify/ds-test-1')
+      .send({ escrowId: 42 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('already released');
+  });
+
+  it('returns 400 when escrow is already refunded', async () => {
+    vi.mocked(getEscrow).mockResolvedValue({ ...VALID_ESCROW, refunded: true });
+
+    const res = await request(app)
+      .post('/api/verify/ds-test-1')
+      .send({ escrowId: 42 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('already refunded');
+  });
+
+  it('returns 400 when escrow dataset_id does not match', async () => {
+    vi.mocked(getEscrow).mockResolvedValue({ ...VALID_ESCROW, dataset_id: 'other-dataset' });
+
+    const res = await request(app)
+      .post('/api/verify/ds-test-1')
+      .send({ escrowId: 42 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('mismatch');
+  });
+
+  it('returns 200 without answer when buyerQuestion is not provided', async () => {
+    const res = await request(app)
+      .post('/api/verify/ds-test-1')
+      .send({ escrowId: 42 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
 });
 
 // ── Tests: POST /api/verify/:id/demo ────────────────────────────────────────
