@@ -12,7 +12,7 @@ import {
 import { validateBody } from '../common/validate';
 import { sanitizeUserText } from '../common/sanitize';
 import { notifySeller } from '../webhooks/webhook.service';
-import { requireApiKey } from '../common/auth.middleware';
+import { requireApiKey, requireSellerJwt } from '../common/auth.middleware';
 
 const STELLAR_ADDRESS_REGEX = /^G[A-Z2-7]{55}$/;
 const MAX_DATA_BYTES = 500 * 1024;
@@ -108,6 +108,31 @@ const createDatasetSchema = z.object({
  */
 
 export const datasetsRouter = Router();
+
+function withoutRawData(dataset: Dataset) {
+  const { data: _data, ...meta } = dataset;
+  return meta;
+}
+
+async function getSellerDashboardData(sellerWallet: string) {
+  const allDatasets = await getAllDatasets();
+  const sellerDatasets = allDatasets.filter(dataset => dataset.sellerWallet === sellerWallet);
+  const sellerDatasetIds = new Set(sellerDatasets.map(dataset => dataset.id));
+  const transactions = (await getTransactions()).filter(transaction =>
+    sellerDatasetIds.has(transaction.datasetId),
+  );
+
+  return {
+    datasets: sellerDatasets.map(withoutRawData),
+    transactions,
+    stats: {
+      totalDatasets: sellerDatasets.length,
+      totalQueries: sellerDatasets.reduce((sum, dataset) => sum + dataset.queriesServed, 0),
+      totalUsdcEarned: sellerDatasets.reduce((sum, dataset) => sum + dataset.totalEarned, 0),
+      totalTransactions: transactions.length,
+    },
+  };
+}
 
 /**
  * @openapi
@@ -223,7 +248,7 @@ datasetsRouter.get('/', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Minimum price cannot exceed maximum price' });
   }
 
-  let datasets = (await getAllDatasets()).map(({ data: _data, ...rest }) => rest);
+  let datasets = (await getAllDatasets()).map(withoutRawData);
 
   // Filter
   if (search) {
@@ -311,13 +336,50 @@ datasetsRouter.get('/stats', async (_req: Request, res: Response) => {
 
 /**
  * @openapi
- * /api/datasets/transactions:
+ * /api/datasets/seller/dashboard:
  *   get:
- *     summary: Get all transactions across all datasets
- *     description: Retrieve all transactions in a single call (no dataset filter)
+ *     summary: Get authenticated seller dashboard data
+ *     description: Retrieve datasets, transactions, and summary stats scoped to the sellerWallet JWT claim.
  *     responses:
  *       200:
- *         description: List of all transactions
+ *         description: Seller dashboard payload
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 sellerWallet:
+ *                   type: string
+ *                 datasets:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Dataset'
+ *                 stats:
+ *                   type: object
+ *                 transactions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ */
+datasetsRouter.get('/seller/dashboard', requireSellerJwt, async (req: Request, res: Response) => {
+  const sellerWallet = req.sellerAuth?.sellerWallet;
+  if (!sellerWallet) return res.status(401).json({ error: 'Invalid seller token' });
+
+  const dashboard = await getSellerDashboardData(sellerWallet);
+  return res.json({ success: true, sellerWallet, ...dashboard });
+});
+
+/**
+ * @openapi
+ * /api/datasets/transactions:
+ *   get:
+ *     summary: Get authenticated seller transactions
+ *     description: Retrieve transactions scoped to the sellerWallet JWT claim.
+ *     responses:
+ *       200:
+ *         description: List of seller transactions
  *         content:
  *           application/json:
  *             schema:
@@ -330,8 +392,11 @@ datasetsRouter.get('/stats', async (_req: Request, res: Response) => {
  *                   items:
  *                     type: object
  */
-datasetsRouter.get('/transactions', (_req: Request, res: Response) => {
-  const transactions = getTransactions();
+datasetsRouter.get('/transactions', requireSellerJwt, async (req: Request, res: Response) => {
+  const sellerWallet = req.sellerAuth?.sellerWallet;
+  if (!sellerWallet) return res.status(401).json({ error: 'Invalid seller token' });
+
+  const { transactions } = await getSellerDashboardData(sellerWallet);
   return res.json({ success: true, transactions });
 });
 
@@ -365,7 +430,7 @@ datasetsRouter.get('/transactions', (_req: Request, res: Response) => {
 datasetsRouter.get('/:id', async (req: Request, res: Response) => {
   const dataset = await getDataset(req.params.id);
   if (!dataset) return res.status(404).json({ error: 'Dataset not found' });
-  const { data: _data, ...meta } = dataset;
+  const meta = withoutRawData(dataset);
   return res.json({ success: true, dataset: meta });
 });
 
@@ -396,9 +461,12 @@ datasetsRouter.get('/:id', async (req: Request, res: Response) => {
  *                   items:
  *                     type: object
  */
-datasetsRouter.get('/:id/transactions', async (req: Request, res: Response) => {
+datasetsRouter.get('/:id/transactions', requireSellerJwt, async (req: Request, res: Response) => {
   const dataset = await getDataset(req.params.id);
   if (!dataset) return res.status(404).json({ error: 'Dataset not found' });
+  if (dataset.sellerWallet !== req.sellerAuth?.sellerWallet) {
+    return res.status(403).json({ error: 'Dataset does not belong to authenticated seller' });
+  }
 
   const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
   const offset = parseInt(req.query.offset as string) || 0;
