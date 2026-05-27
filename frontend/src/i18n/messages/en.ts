@@ -104,6 +104,8 @@ export const en = {
     sell: 'Sell Data',
     dashboard: 'Dashboard',
     mobileMenu: 'Menu',
+    openMobileMenu: 'Open menu',
+    closeMobileMenu: 'Close menu',
     brand: 'Hazina',
     connectWallet: 'Connect Wallet',
     disconnect: 'Disconnect',

@@ -104,7 +104,11 @@ export const es: EnglishMessages = {
     sell: 'Vender datos',
     dashboard: 'Panel',
     mobileMenu: 'Menú',
+    openMobileMenu: 'Abrir menú',
+    closeMobileMenu: 'Cerrar menú',
     brand: 'Hazina',
+    connectWallet: 'Conectar wallet',
+    disconnect: 'Desconectar',
   },
   dataTypes: {
     all: 'Todos los tipos',
