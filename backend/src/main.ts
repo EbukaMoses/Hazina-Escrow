@@ -28,6 +28,7 @@ import { readStore } from './common/storage';
 import { BackupScheduler } from './common/backup.scheduler';
 import { backupRouter, setBackupScheduler } from './common/backup.router';
 import { createCompressionMiddleware } from './common/compression';
+import { requireApiKey } from './common/auth.middleware';
 import {
   createAgentRateLimitMiddleware,
   createGlobalRateLimitMiddleware,
@@ -263,9 +264,9 @@ process.on('uncaughtException', (err: Error) => {
 const v1Router = express.Router();
 
 v1Router.use('/datasets', datasetsRouter);
-v1Router.use('/agent', agentRouter);
+v1Router.use('/agent', requireApiKey, agentRouter);
 v1Router.use('/webhooks', webhooksRouter);
-v1Router.use('/payments', paymentsRouter);
+v1Router.use('/payments', requireApiKey, paymentsRouter);
 v1Router.use('/backups', backupRouter);
 
 app.use('/api/v1', v1Router);

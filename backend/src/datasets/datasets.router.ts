@@ -13,7 +13,7 @@ import type { Dataset } from '../common/storage';
 import { validateBody } from '../common/validate';
 import { sanitizeUserText } from '../common/sanitize';
 import { notifySeller } from '../webhooks/webhook.service';
-import { requireApiKey, requireSellerJwt } from '../common/auth.middleware';
+import { requireSellerMutationAuth, requireSellerJwt } from '../common/auth.middleware';
 const MAX_DATA_BYTES = 500 * 1024;
 const makeSanitizedTextField = (fieldName: string, maxLength: number) =>
   z
@@ -520,7 +520,7 @@ datasetsRouter.get('/:id/transactions', requireSellerJwt, async (req: Request, r
  */
 datasetsRouter.post(
   '/',
-  requireApiKey,
+  requireSellerMutationAuth,
   validateBody(createDatasetSchema),
   async (req: Request, res: Response) => {
     const { name, description, type, pricePerQuery, sellerWallet, data } = req.body as z.infer<
