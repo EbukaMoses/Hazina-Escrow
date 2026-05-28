@@ -41,6 +41,7 @@ describe('api request throttling', () => {
             data: [],
             total: 0,
             page: 1,
+            pageSize: 20,
             totalPages: 1,
           }),
         );
@@ -56,6 +57,7 @@ describe('api request throttling', () => {
             data: [],
             total: 0,
             page: 1,
+            pageSize: 20,
             totalPages: 1,
           }),
         ),
@@ -107,6 +109,7 @@ describe('api request throttling', () => {
           data: [],
           total: 0,
           page: 1,
+          pageSize: 20,
           totalPages: 1,
         }),
       );
@@ -137,6 +140,7 @@ describe('api request throttling', () => {
           data: [],
           total: 0,
           page: 1,
+          pageSize: 20,
           totalPages: 1,
         }),
       ),
@@ -155,7 +159,9 @@ describe('api request throttling', () => {
       sort: 'price-asc',
     });
 
-    const url = new URL(String(fetchMock.mock.calls[0][0]), 'http://localhost');
+    const firstCall = fetchMock.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const url = new URL(String(firstCall?.[0]), 'http://localhost');
     expect(url.searchParams.getAll('type')).toEqual(['yield-data', 'risk-scores']);
     expect(url.searchParams.get('minPrice')).toBe('0.5');
     expect(url.searchParams.get('maxPrice')).toBe('5');
