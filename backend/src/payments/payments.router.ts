@@ -19,6 +19,7 @@ import {
   markDeliveryFailure,
   processPayment,
 } from "./payments.service";
+import { PaymentError, StellarTimeoutError } from "./stellar.service";
 
 export const paymentsRouter = Router();
 
@@ -269,8 +270,17 @@ paymentsRouter.post("/verify/:id", validateBody(verifySchema), async (req: Reque
       warning: null,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal verification error";
-    return res.status(400).json({ error: message });
+    if (err instanceof StellarTimeoutError) {
+      // Network-level failure — not the client's fault
+      return res.status(503).json({ error: err.message });
+    }
+    if (err instanceof PaymentError) {
+      // Intentional user-facing error with a safe message we authored
+      return res.status(400).json({ error: err.message });
+    }
+    // Unexpected error — log full details server-side, send nothing internal to client
+    console.error("[Verify] Unexpected error processing payment:", err);
+    return res.status(500).json({ error: "Payment verification failed — please try again" });
   }
 });
 
