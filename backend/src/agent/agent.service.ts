@@ -176,7 +176,6 @@ async function _executeResearch(
       amount: dataset.pricePerQuery,
       sellerPaid: true,
       sellerAmount: parseFloat((dataset.pricePerQuery * 0.95).toFixed(7)),
-      sellerTxHash: txHash,
       buyerQuery: `[Agent Job ${jobId}] ${query}`,
       timestamp: new Date().toISOString(),
     });

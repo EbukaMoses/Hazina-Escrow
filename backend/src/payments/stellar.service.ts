@@ -10,8 +10,8 @@ const stellarBreaker = getCircuitBreaker('stellar-horizon', {
   resetTimeoutMs: 60_000, // 60 s
 });
 
-// Configurable via env; default 10 seconds as specified by the maintainer
-const STELLAR_TIMEOUT_MS = parseInt(process.env.STELLAR_TIMEOUT_MS ?? '10000', 10);
+// Configurable via env; read per-call so tests can override it after module load
+const getStellarTimeoutMs = () => parseInt(process.env.STELLAR_TIMEOUT_MS ?? '10000', 10);
 
 interface VerifyParams {
   txHash: string;
@@ -58,6 +58,17 @@ export class StellarTimeoutError extends Error {
   }
 }
 
+/**
+ * Marker class for errors whose message is safe to forward to the client as-is.
+ * Only throw this for messages written by us — never wrap a raw SDK or library error.
+ */
+export class PaymentError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PaymentError';
+  }
+}
+
 async function withHorizonRetry<T>(fn: () => Promise<T>): Promise<T> {
   const maxAttempts = 3;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -93,7 +104,7 @@ export async function verifyStellarPayment(params: VerifyParams): Promise<Verify
             ]),
           ),
         ),
-      STELLAR_TIMEOUT_MS,
+      getStellarTimeoutMs(),
     );
 
     const paymentOps = ops.records.filter(
@@ -191,6 +202,9 @@ export async function verifyStellarPayment(params: VerifyParams): Promise<Verify
         return { valid: false, reason: 'Transaction not found on Stellar testnet' };
       }
     }
-    throw err;
+    // Log the full SDK error server-side but never forward it to the client —
+    // Stellar errors can contain sequence numbers, account IDs, and other internals.
+    console.error('[Stellar] Unexpected Horizon error:', err);
+    throw new Error('Stellar network error — please try again shortly');
   }
 }
