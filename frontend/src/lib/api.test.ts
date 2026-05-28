@@ -39,6 +39,7 @@ describe('api request throttling', () => {
             data: [],
             total: 0,
             page: 1,
+            pageSize: 20,
             totalPages: 1,
           }),
         );
@@ -54,6 +55,7 @@ describe('api request throttling', () => {
             data: [],
             total: 0,
             page: 1,
+            pageSize: 20,
             totalPages: 1,
           }),
         ),
@@ -105,6 +107,7 @@ describe('api request throttling', () => {
           data: [],
           total: 0,
           page: 1,
+          pageSize: 20,
           totalPages: 1,
         }),
       );
@@ -135,6 +138,7 @@ describe('api request throttling', () => {
           data: [],
           total: 0,
           page: 1,
+          pageSize: 20,
           totalPages: 1,
         }),
       ),
