@@ -200,7 +200,6 @@ export interface QueryResult {
   };
 }
 
-
 interface RequestOptions extends RequestInit {
   /** Per-call override of the abort timeout, in milliseconds. */
   timeoutMs?: number;

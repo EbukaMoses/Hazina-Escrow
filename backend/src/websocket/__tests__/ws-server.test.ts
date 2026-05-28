@@ -15,7 +15,7 @@ describe('WebSocket Server', () => {
     const app = express();
     server = http.createServer(app);
 
-    await new Promise<void>((resolve) => server.listen(0, resolve));
+    await new Promise<void>(resolve => server.listen(0, resolve));
     const addr = server.address();
     if (typeof addr === 'object' && addr !== null) {
       port = addr.port;
@@ -26,7 +26,9 @@ describe('WebSocket Server', () => {
 
   afterAll(async () => {
     if (wsServer) wsServer.shutdown();
-    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+    await new Promise<void>((resolve, reject) =>
+      server.close(err => (err ? reject(err) : resolve())),
+    );
   });
 
   it('should accept WebSocket connections', () => {
@@ -43,7 +45,7 @@ describe('WebSocket Server', () => {
         }
       });
 
-      client.on('error', (error) => {
+      client.on('error', error => {
         reject(error);
       });
     });
@@ -62,7 +64,7 @@ describe('WebSocket Server', () => {
         client.send(JSON.stringify(subscribe));
       });
 
-      client.on('message', (data) => {
+      client.on('message', data => {
         try {
           const msg = JSON.parse(data.toString());
           expect(msg.datasetIds).toContain('dataset-1');
@@ -75,7 +77,7 @@ describe('WebSocket Server', () => {
         }
       });
 
-      client.on('error', (error) => {
+      client.on('error', error => {
         reject(error);
       });
     });
@@ -89,7 +91,7 @@ describe('WebSocket Server', () => {
         client.send(JSON.stringify({ type: 'ping' }));
       });
 
-      client.on('message', (data) => {
+      client.on('message', data => {
         try {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'pong') {
@@ -102,7 +104,7 @@ describe('WebSocket Server', () => {
         }
       });
 
-      client.on('error', (error) => {
+      client.on('error', error => {
         reject(error);
       });
     });
@@ -129,7 +131,7 @@ describe('WebSocket Server', () => {
           JSON.stringify({
             type: 'subscribe',
             datasetIds: ['dataset-123'],
-          })
+          }),
         );
         client1Ready = true;
       });
@@ -139,7 +141,7 @@ describe('WebSocket Server', () => {
           JSON.stringify({
             type: 'subscribe',
             datasetIds: ['dataset-123'],
-          })
+          }),
         );
         client2Ready = true;
 
@@ -149,19 +151,16 @@ describe('WebSocket Server', () => {
             transactionEventEmitter.updateTransactionStatus(
               'tx-test-123',
               'dataset-123',
-              'pending'
+              'pending',
             );
           }
         }, 100);
       });
 
-      client2.on('message', (data) => {
+      client2.on('message', data => {
         try {
           const msg = JSON.parse(data.toString());
-          if (
-            msg.type === 'transaction:update' &&
-            msg.data.transactionId === 'tx-test-123'
-          ) {
+          if (msg.type === 'transaction:update' && msg.data.transactionId === 'tx-test-123') {
             client2ReceivedUpdate = true;
             checkDone();
           }
@@ -170,11 +169,11 @@ describe('WebSocket Server', () => {
         }
       });
 
-      client1.on('error', (error) => {
+      client1.on('error', error => {
         reject(error);
       });
 
-      client2.on('error', (error) => {
+      client2.on('error', error => {
         reject(error);
       });
     });
@@ -204,7 +203,7 @@ describe('WebSocket Server', () => {
           JSON.stringify({
             type: 'subscribe',
             datasetIds: ['dataset-456'],
-          })
+          }),
         );
         client1Ready = true;
       });
@@ -215,7 +214,7 @@ describe('WebSocket Server', () => {
           JSON.stringify({
             type: 'subscribe',
             datasetIds: ['dataset-789'],
-          })
+          }),
         );
         client2Ready = true;
 
@@ -225,13 +224,13 @@ describe('WebSocket Server', () => {
             transactionEventEmitter.updateTransactionStatus(
               'tx-test-456',
               'dataset-456',
-              'completed'
+              'completed',
             );
           }
         }, 100);
       });
 
-      client2.on('message', (data) => {
+      client2.on('message', data => {
         try {
           const msg = JSON.parse(data.toString());
           // Should not receive the transaction:update for dataset-456
@@ -247,12 +246,12 @@ describe('WebSocket Server', () => {
         }
       });
 
-      client1.on('error', (error) => {
+      client1.on('error', error => {
         clearTimeout(timeoutId);
         reject(error);
       });
 
-      client2.on('error', (error) => {
+      client2.on('error', error => {
         clearTimeout(timeoutId);
         reject(error);
       });
@@ -269,7 +268,7 @@ describe('WebSocket Server', () => {
           JSON.stringify({
             type: 'subscribe',
             datasetIds: ['dataset-multi'],
-          })
+          }),
         );
 
         setTimeout(() => {
@@ -279,7 +278,7 @@ describe('WebSocket Server', () => {
         }, 100);
       });
 
-      client.on('message', (data) => {
+      client.on('message', data => {
         try {
           const msg = JSON.parse(data.toString());
 
@@ -304,7 +303,7 @@ describe('WebSocket Server', () => {
         }
       });
 
-      client.on('error', (error) => {
+      client.on('error', error => {
         reject(error);
       });
     });
@@ -355,7 +354,7 @@ describe('WebSocket Server', () => {
         client.send('not valid json');
       });
 
-      client.on('message', (data) => {
+      client.on('message', data => {
         try {
           const msg = JSON.parse(data.toString());
           if (msg.type === 'error') {
@@ -368,7 +367,7 @@ describe('WebSocket Server', () => {
         }
       });
 
-      client.on('error', (error) => {
+      client.on('error', error => {
         reject(error);
       });
     });

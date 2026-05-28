@@ -23,7 +23,7 @@ vi.mock('../../webhooks/webhook.service', () => ({
   notifySeller: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('../../common/storage', async (importOriginal) => {
+vi.mock('../../common/storage', async importOriginal => {
   const actual = await importOriginal<typeof import('../../common/storage')>();
   return {
     ...actual,
@@ -81,7 +81,11 @@ describe('POST /api/v1/payments/verify/:id', () => {
     app = makeApp();
     vi.mocked(getDataset).mockResolvedValue(DATASET);
     vi.mocked(txHashUsed).mockResolvedValue(false);
-    vi.mocked(verifyStellarPayment).mockResolvedValue({ valid: true, actualAmount: 1, memo: 'haz' });
+    vi.mocked(verifyStellarPayment).mockResolvedValue({
+      valid: true,
+      actualAmount: 1,
+      memo: 'haz',
+    });
     vi.mocked(generateDataSummary).mockResolvedValue({
       summary: 'Executive summary',
       answer: 'Buyer answer',
@@ -100,17 +104,13 @@ describe('POST /api/v1/payments/verify/:id', () => {
   });
 
   it('returns 400 when txHash is missing', async () => {
-    const res = await request(app)
-      .post('/api/v1/payments/verify/ds-test-1')
-      .send({});
+    const res = await request(app).post('/api/v1/payments/verify/ds-test-1').send({});
 
     expect(res.status).toBe(400);
   });
 
   it('returns 400 when txHash is empty', async () => {
-    const res = await request(app)
-      .post('/api/v1/payments/verify/ds-test-1')
-      .send({ txHash: '' });
+    const res = await request(app).post('/api/v1/payments/verify/ds-test-1').send({ txHash: '' });
 
     expect(res.status).toBe(400);
   });
@@ -161,7 +161,11 @@ describe('POST /api/v1/payments/verify/:id', () => {
 
     // Re-assert critical mocks to avoid interference from other parallel tests
     vi.mocked(txHashUsed).mockResolvedValue(false);
-    vi.mocked(verifyStellarPayment).mockResolvedValue({ valid: true, actualAmount: 1, memo: 'haz' });
+    vi.mocked(verifyStellarPayment).mockResolvedValue({
+      valid: true,
+      actualAmount: 1,
+      memo: 'haz',
+    });
 
     const res = await request(app)
       .post('/api/v1/payments/verify/ds-test-1')
@@ -194,9 +198,7 @@ describe('POST /api/v1/payments/verify/:id/demo', () => {
   });
 
   it('returns 200 with demo data', async () => {
-    const res = await request(app)
-      .post('/api/v1/payments/verify/ds-test-1/demo')
-      .send({});
+    const res = await request(app).post('/api/v1/payments/verify/ds-test-1/demo').send({});
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -207,9 +209,7 @@ describe('POST /api/v1/payments/verify/:id/demo', () => {
   it('returns 404 when dataset does not exist', async () => {
     vi.mocked(getDataset).mockResolvedValue(undefined);
 
-    const res = await request(app)
-      .post('/api/v1/payments/verify/does-not-exist/demo')
-      .send({});
+    const res = await request(app).post('/api/v1/payments/verify/does-not-exist/demo').send({});
 
     expect(res.status).toBe(404);
   });
@@ -217,12 +217,9 @@ describe('POST /api/v1/payments/verify/:id/demo', () => {
   it('returns 200 with fallback summary when AI throws', async () => {
     vi.mocked(generateDataSummary).mockRejectedValue(new Error('Claude unavailable'));
 
-    const res = await request(app)
-      .post('/api/v1/payments/verify/ds-test-1/demo')
-      .send({});
+    const res = await request(app).post('/api/v1/payments/verify/ds-test-1/demo').send({});
 
     expect(res.status).toBe(200);
     expect(res.body.ai.summary).toContain('Demo mode');
   });
 });
-

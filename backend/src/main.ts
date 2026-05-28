@@ -17,7 +17,11 @@ import _swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 
 import { datasetsRouter } from './datasets/datasets.router';
-import { paymentsRouter, startDeliveryRetryWorker, stopDeliveryRetryWorker } from './payments/payments.router';
+import {
+  paymentsRouter,
+  startDeliveryRetryWorker,
+  stopDeliveryRetryWorker,
+} from './payments/payments.router';
 import { agentRouter } from './agent/agent.router';
 import { webhooksRouter } from './webhooks/webhook.router';
 import { readStore } from './common/storage';
@@ -232,7 +236,9 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   const message = err.message || 'Internal server error';
   console.error(`[Global Error Handler] [requestId=${req.id}]`, err);
   Sentry.captureException(err);
-  res.status(status).json({ error: message, code: err.code || 'INTERNAL_ERROR', requestId: req.id });
+  res
+    .status(status)
+    .json({ error: message, code: err.code || 'INTERNAL_ERROR', requestId: req.id });
 });
 
 startDeliveryRetryWorker();
