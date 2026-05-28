@@ -13,6 +13,7 @@ import { validateBody } from '../common/validate';
 import { sanitizeUserText } from '../common/sanitize';
 import { notifySeller } from '../webhooks/webhook.service';
 import { requireApiKey, requireSellerJwt } from '../common/auth.middleware';
+import { domainMetrics } from '../common/datadog';
 
 const STELLAR_ADDRESS_REGEX = /^G[A-Z2-7]{55}$/;
 const MAX_DATA_BYTES = 500 * 1024;
@@ -537,6 +538,12 @@ datasetsRouter.post(
     };
 
     await addDataset(dataset);
+
+    // Track dataset creation
+    domainMetrics.datasetCreated({
+      datasetType: type,
+      pricePerQuery,
+    });
 
     // Notify seller via webhook
     notifySeller(dataset.sellerWallet, 'dataset.created', {

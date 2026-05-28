@@ -14,6 +14,7 @@ import { generateDataSummary } from "../ai/claude.service";
 import { sanitizeUserText } from "../common/sanitize";
 import { transactionEventEmitter } from "../websocket/transaction-events";
 import { requireAdminKey } from "../common/auth.middleware";
+import { domainMetrics } from "../common/datadog";
 import {
   deliverVerifiedPayment,
   markDeliveryFailure,
@@ -358,6 +359,17 @@ paymentsRouter.post("/verify/:id/demo", validateBody(verifyDemoSchema), async (r
     dataset.id,
     dataset.queriesServed + 1
   );
+
+  domainMetrics.paymentVerified({
+    datasetType: dataset.type,
+    mode: "demo",
+    status: "delivered",
+  });
+  domainMetrics.datasetQueried({
+    datasetType: dataset.type,
+    mode: "demo",
+    source: "buyer",
+  });
 
   return res.json({
     success: true,
