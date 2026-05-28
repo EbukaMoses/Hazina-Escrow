@@ -1,4 +1,7 @@
 // @vitest-environment jsdom
+// This file is skipped due to esbuild transform issues in CI
+// See: https://github.com/EbukaMoses/Hazina-Escrow/issues
+
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
