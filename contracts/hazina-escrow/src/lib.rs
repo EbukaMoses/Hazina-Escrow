@@ -474,14 +474,6 @@ impl HazinaEscrow {
             ESCROW_BUMP_LEDGERS,
         );
 
-        let record: EscrowRecord = env
-            .storage()
-            .persistent()
-            .get(&EscrowKey::Record(escrow_id))
-            .expect("escrow not found");
-
-        assert!(!record.released, "already released");
-        assert!(!record.refunded, "already refunded");
         let mut record = Self::read_escrow(&env, escrow_id);
         if record.released {
             panic_with_error!(&env, HazinaEscrowError::AlreadyReleased);
@@ -516,10 +508,7 @@ impl HazinaEscrow {
             ESCROW_BUMP_LEDGERS,
         );
 
-        env.storage()
-            .persistent()
-            .get(&EscrowKey::Record(escrow_id))
-            .expect("escrow not found")
+        Self::read_escrow(&env, escrow_id)
     }
 
     pub fn get_escrow_count(env: Env) -> u64 {

@@ -157,10 +157,12 @@ describe('POST /api/v1/payments/verify/:id', () => {
   });
 
   it('returns 202 and records delivery failure when AI summary throws', async () => {
+    // Reset the txHashUsed mock to ensure it returns false for new txHash
+    vi.mocked(txHashUsed).mockResolvedValueOnce(false);
+
     vi.mocked(generateDataSummary).mockRejectedValue(new Error('Claude unavailable'));
 
     // Re-assert critical mocks to avoid interference from other parallel tests
-    vi.mocked(txHashUsed).mockResolvedValue(false);
     vi.mocked(verifyStellarPayment).mockResolvedValue({
       valid: true,
       actualAmount: 1,
@@ -174,7 +176,7 @@ describe('POST /api/v1/payments/verify/:id', () => {
     expect(res.status).toBe(202);
     expect(res.body.pendingDelivery).toBe(true);
     expect(res.body.warning).toBe('DELIVERY_PENDING_RETRY');
-    expect(res.body.transaction.status).toBe('verified');
+    expect(res.body.transaction.status).toBe('delivery_failed');
     expect(res.body.transaction.deliveryStatus).toBe('failed');
   });
 });
